@@ -10,34 +10,21 @@ import { Label } from '@/components/ui/label.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
 import { 
-  ArrowLeft, 
-  FileText, 
-  User, 
-  Building2, 
-  Calendar, 
-  DollarSign,
-  Download,
-  Upload,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Plus,
-  Edit,
-  MessageSquare,
-  History,
-  Send
+  ArrowLeft, FileText, User, Building2, Calendar, DollarSign,
+  Download, Upload, CheckCircle, Clock, AlertCircle, Plus, Edit,
+  MessageSquare, History, Send, Save
 } from 'lucide-react';
-import PendingTasks from './PendingTasks.jsx'; // IMPORTAÇÃO DO NOVO COMPONENTE
+import PendingTasks from './PendingTasks.jsx';
 
-const ANALYSTS = [
-  { id: 1, name: 'Ana Silva', email: 'ana.silva@sesc.com.br', department: 'Renda Fixa' },
-  { id: 2, name: 'Carlos Santos', email: 'carlos.santos@sesc.com.br', department: 'Securitização' },
-  { id: 3, name: 'Maria Oliveira', email: 'maria.oliveira@sesc.com.br', department: 'Estruturação' },
-  { id: 4, name: 'João Pereira', email: 'joao.pereira@sesc.com.br', department: 'Compliance' },
-  { id: 5, name: 'Fernanda Costa', email: 'fernanda.costa@sesc.com.br', department: 'Jurídico' }
+const ANALYSTS_LIST = [
+  { id: 'Ana Silva', name: 'Ana Silva' },
+  { id: 'Carlos Santos', name: 'Carlos Santos' },
+  { id: 'Maria Oliveira', name: 'Maria Oliveira' },
+  { id: 'João Pereira', name: 'João Pereira' },
+  { id: 'Fernanda Costa', name: 'Fernanda Costa' },
+  { id: 'A definir', name: 'A definir' },
 ];
 
-// Componente de Badge de Status com cores dinâmicas (local para não depender do App.jsx)
 function StatusBadge({ status }) {
   const baseClasses = "px-2.5 py-0.5 text-xs font-semibold rounded-full";
   const statusClasses = {
@@ -48,11 +35,35 @@ function StatusBadge({ status }) {
   return <span className={`${baseClasses} ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`}>{status}</span>;
 }
 
-export default function OperationDetails({ operations, documents, setDocuments, setLegalTasks }) {
+// --- DEFINIÇÃO DO COMPONENTE CORRIGIDA ---
+// Adicionadas as props 'legalTasks' e 'setLegalTasks'
+export default function OperationDetails({ operations, setOperations, documents, setDocuments, legalTasks, setLegalTasks }) {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const [isEditing, setIsEditing] = useState(false);
   const operation = operations.find(op => op.id.toString() === id);
+  const [editableData, setEditableData] = useState(operation);
+
+  useEffect(() => {
+    setEditableData(operation);
+  }, [operation]);
+
+  const handleInputChange = (field, value) => {
+    setEditableData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveChanges = () => {
+    setOperations(prevOps => 
+      prevOps.map(op => (op.id.toString() === id ? editableData : op))
+    );
+    setIsEditing(false);
+    alert('Operação atualizada com sucesso!');
+  };
+  
+  const triggerFileInput = (documentId) => {
+    document.getElementById(`file-upload-${documentId}`).click();
+  };
 
   const [newMinute, setNewMinute] = useState({ documentId: null, content: '' });
   const [followUps, setFollowUps] = useState([
@@ -60,7 +71,6 @@ export default function OperationDetails({ operations, documents, setDocuments, 
     { id: 2, date: '2024-01-20', author: 'João Pereira', priority: 'media', content: 'Documentação compliance aprovada', status: 'concluido' }
   ]);
   const [newFollowUp, setNewFollowUp] = useState({ content: '', priority: 'media' });
-  
   const [checklist, setChecklist] = useState([
     { id: 'cadastro_emissor', name: 'Cadastro do Emissor', description: 'Verificar se o cadastro do emissor está completo e atualizado', completed: true, completedBy: 'Ana Silva', completedDate: '2024-01-15' },
     { id: 'contrato_prestacao', name: 'Contrato de Prestação de Serviço', description: 'Confirmar assinatura e vigência do contrato', completed: false, completedBy: null, completedDate: null },
@@ -68,17 +78,14 @@ export default function OperationDetails({ operations, documents, setDocuments, 
     { id: 'boletim_subscricao', name: 'Boletim de Subscrição (Facultativo)', description: 'Se aplicável, verificar boletim de subscrição', completed: false, completedBy: null, completedDate: null },
     { id: 'comprovante_integralizacao', name: 'Comprovante de Integralização', description: 'Confirmar integralização dos recursos', completed: false, completedBy: null, completedDate: null }
   ]);
-  
   const [operationLog, setOperationLog] = useState([
     { id: 1, date: '2024-01-10', time: '09:30', user: 'Ana Silva', action: 'Operação criada', details: 'Nova operação CDB Banco XYZ 2024 criada no sistema' },
     { id: 2, date: '2024-01-12', time: '14:15', user: 'Fernanda Costa', action: 'Documento adicionado', details: 'Contrato de Prestação de Serviços v1.0 adicionado' },
     { id: 3, date: '2024-01-15', time: '10:45', user: 'Ana Silva', action: 'Checklist atualizado', details: 'Item "Cadastro do Emissor" marcado como concluído' },
   ]);
-
   const [assignModal, setAssignModal] = useState({ open: false, documentId: null, documentName: '' });
   const [selectedLegalUser, setSelectedLegalUser] = useState('');
   const [assignmentNote, setAssignmentNote] = useState('');
-
   const legalUsers = [
     { id: 'fernanda.costa', name: 'Fernanda Costa', email: 'fernanda.costa@sesc.com.br' },
     { id: 'ricardo.silva', name: 'Ricardo Silva', email: 'ricardo.silva@sesc.com.br' },
@@ -98,126 +105,93 @@ export default function OperationDetails({ operations, documents, setDocuments, 
   const handleFileUpload = (documentId, event) => {
     const file = event.target.files[0];
     if (!file) return;
-
     setDocuments(prevDocuments => {
       return prevDocuments.map(doc => {
         if (doc.id === documentId) {
           const lastVersion = doc.versions.length > 0 ? doc.versions[doc.versions.length - 1] : { version: '0.9' };
           const newVersionNumber = (parseFloat(lastVersion.version) + 0.1).toFixed(1);
-
           const newVersion = {
-            id: Date.now(),
-            version: newVersionNumber,
-            file: file.name,
-            uploadDate: new Date().toISOString().split('T')[0],
-            uploadedBy: 'Ana Silva',
-            status: 'atual'
+            id: Date.now(), version: newVersionNumber, file: file.name,
+            uploadDate: new Date().toISOString().split('T')[0], uploadedBy: 'Claudio Nalin', status: 'atual'
           };
-
           const updatedVersions = doc.versions.map(v => ({ ...v, status: 'obsoleto' }));
-
-          return {
-            ...doc,
-            versions: [...updatedVersions, newVersion]
-          };
+          return { ...doc, versions: [...updatedVersions, newVersion] };
         }
         return doc;
       });
     });
-
-    alert(`Nova versão do documento "${documents.find(d => d.id === documentId).name}" foi adicionada com sucesso!`);
+    alert(`Nova versão do documento foi adicionada com sucesso!`);
   };
 
   const addMinute = (documentId) => {
     if (newMinute.content.trim()) {
       const updatedDocuments = documents.map(doc => {
         if (doc.id === documentId) {
-          return {
-            ...doc,
-            minutes: [
-              ...doc.minutes,
-              {
-                id: Date.now(),
-                date: new Date().toISOString().split('T')[0],
-                author: 'Ana Silva',
-                content: newMinute.content
-              }
-            ]
-          }
+          return { ...doc, minutes: [ ...doc.minutes, { id: Date.now(), date: new Date().toISOString().split('T')[0], author: 'Claudio Nalin', content: newMinute.content }]};
         }
-        return doc
-      })
-      setDocuments(updatedDocuments)
-      setNewMinute({ documentId: null, content: '' })
+        return doc;
+      });
+      setDocuments(updatedDocuments);
+      setNewMinute({ documentId: null, content: '' });
     }
-  }
+  };
 
   const addFollowUp = () => {
     if (newFollowUp.content.trim()) {
       const followUp = {
-        id: Date.now(),
-        date: new Date().toISOString().split('T')[0],
-        author: 'Ana Silva',
-        priority: newFollowUp.priority,
-        content: newFollowUp.content,
-        status: 'pendente'
-      }
-      setFollowUps([followUp, ...followUps])
-      setNewFollowUp({ content: '', priority: 'media' })
+        id: Date.now(), date: new Date().toISOString().split('T')[0], author: 'Claudio Nalin',
+        priority: newFollowUp.priority, content: newFollowUp.content, status: 'pendente'
+      };
+      setFollowUps([followUp, ...followUps]);
+      setNewFollowUp({ content: '', priority: 'media' });
     }
-  }
+  };
 
   const toggleFollowUpStatus = (followUpId) => {
-    setFollowUps(followUps.map(fu => 
-      fu.id === followUpId 
-        ? { ...fu, status: fu.status === 'pendente' ? 'concluido' : 'pendente' }
-        : fu
-    ))
-  }
+    setFollowUps(followUps.map(fu => fu.id === followUpId ? { ...fu, status: fu.status === 'pendente' ? 'concluido' : 'pendente' } : fu));
+  };
 
   const assignToLegal = (documentId) => {
-    const document = documents.find(doc => doc.id === documentId)
-    setAssignModal({ 
-      open: true, 
-      documentId: documentId, 
-      documentName: document?.name || 'Documento' 
-    })
-    setSelectedLegalUser('')
-    setAssignmentNote('')
-  }
+    const document = documents.find(doc => doc.id === documentId);
+    if (!document || document.versions.length === 0) {
+      alert("Não é possível atribuir um documento sem versões. Por favor, suba uma versão primeiro.");
+      return;
+    }
+    setAssignModal({ open: true, documentId: documentId, documentName: document.name });
+    setSelectedLegalUser('');
+    setAssignmentNote('');
+  };
 
   const toggleChecklistItem = (itemId) => {
     const updatedChecklist = checklist.map(item => {
       if (item.id === itemId) {
-        const isCompleting = !item.completed
+        const isCompleting = !item.completed;
         const updatedItem = {
-          ...item,
-          completed: isCompleting,
-          completedBy: isCompleting ? 'Ana Silva' : null,
+          ...item, completed: isCompleting,
+          completedBy: isCompleting ? 'Claudio Nalin' : null,
           completedDate: isCompleting ? new Date().toISOString().split('T')[0] : null
-        }
-        
+        };
         const logEntry = {
-          id: Date.now(),
-          date: new Date().toISOString().split('T')[0],
+          id: Date.now(), date: new Date().toISOString().split('T')[0],
           time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-          user: 'Ana Silva',
-          action: 'Checklist atualizado',
+          user: 'Claudio Nalin', action: 'Checklist atualizado',
           details: `Item "${item.name}" ${isCompleting ? 'marcado como concluído' : 'desmarcado'}`
-        }
-        setOperationLog([logEntry, ...operationLog])
-        
-        return updatedItem
+        };
+        setOperationLog([logEntry, ...operationLog]);
+        return updatedItem;
       }
-      return item
-    })
-    setChecklist(updatedChecklist)
-  }
+      return item;
+    });
+    setChecklist(updatedChecklist);
+  };
 
+  // --- FUNÇÃO DE CONFIRMAÇÃO CORRIGIDA E COMPLETA ---
   const confirmAssignment = () => {
     if (selectedLegalUser && assignModal.documentId) {
       const selectedUser = legalUsers.find(user => user.id === selectedLegalUser);
       const document = documents.find(doc => doc.id === assignModal.documentId);
+      
+      // Pega a ÚLTIMA versão do documento, que é a que está sendo submetida
       const latestVersion = document.versions[document.versions.length - 1];
 
       const newTask = {
@@ -226,18 +200,20 @@ export default function OperationDetails({ operations, documents, setDocuments, 
         documentId: assignModal.documentId,
         operationName: operation.name,
         documentName: `${document.name} v${latestVersion.version}`,
-        assignedBy: 'Ana Silva',
+        fileName: latestVersion.file, // <<< A MUDANÇA CRUCIAL ESTÁ AQUI
+        assignedBy: 'Claudio Nalin',
         assignedDate: new Date().toISOString().split('T')[0],
         status: 'Pendente',
         deadline: null,
       };
 
+      // A função setLegalTasks agora vem das props
       setLegalTasks(prevTasks => [newTask, ...prevTasks]);
       
       setAssignModal({ open: false, documentId: null, documentName: '' });
-      alert(`Documento "${assignModal.documentName}" atribuído com sucesso para ${selectedUser.name}!`);
+      alert(`Documento "${newTask.documentName}" atribuído com sucesso para ${selectedUser.name}!`);
     }
-  }
+  };
 
   if (!operation) {
     return (
@@ -255,10 +231,7 @@ export default function OperationDetails({ operations, documents, setDocuments, 
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Button variant="outline" onClick={() => navigate('/operations')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
-          </Button>
+          <Button variant="outline" onClick={() => navigate('/operations')}><ArrowLeft className="w-4 h-4 mr-2" />Voltar</Button>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{operation.name}</h1>
             <p className="text-gray-600">{operation.type} - {operation.issuer}</p>
@@ -271,35 +244,35 @@ export default function OperationDetails({ operations, documents, setDocuments, 
 
       <Card>
         <CardContent className="p-6">
-          <div className="summary-grid">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
             <div className="flex items-center space-x-3">
-              <DollarSign className="w-8 h-8 text-green-600" />
+              <DollarSign className="w-6 h-6 text-green-600 flex-shrink-0" />
               <div>
-                <p className="text-sm text-gray-600">Valor</p>
-                <p className="text-lg font-semibold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(operation.value)}</p>
+                <p className="text-gray-500">Valor</p>
+                <p className="font-semibold text-base">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(operation.value)}</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <User className="w-8 h-8 text-blue-600" />
+              <User className="w-6 h-6 text-blue-600 flex-shrink-0" />
               <div>
-                <p className="text-sm text-gray-600">Analista</p>
-                <p className="text-lg font-semibold">{operation.analyst}</p>
+                <p className="text-gray-500">Analista</p>
+                <p className="font-semibold text-base">{operation.analyst || 'A definir'}</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <Calendar className="w-8 h-8 text-purple-600" />
+              <Calendar className="w-6 h-6 text-purple-600 flex-shrink-0" />
               <div>
-                <p className="text-sm text-gray-600">Vencimento</p>
-                <p className="text-lg font-semibold">{operation.maturity}</p>
+                <p className="text-gray-500">Vencimento</p>
+                <p className="font-semibold text-base">{operation.maturity || 'A definir'}</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <CheckCircle className="w-8 h-8 text-orange-600" />
+              <CheckCircle className="w-6 h-6 text-orange-600 flex-shrink-0" />
               <div>
-                <p className="text-sm text-gray-600">Progresso</p>
+                <p className="text-gray-500">Progresso</p>
                 <div className="flex items-center space-x-2">
                   <Progress value={operation.progress} className="w-20 h-2" />
-                  <span className="text-lg font-semibold">{operation.progress}%</span>
+                  <span className="font-semibold text-base">{operation.progress}%</span>
                 </div>
               </div>
             </div>
@@ -321,94 +294,46 @@ export default function OperationDetails({ operations, documents, setDocuments, 
             <Card key={document.id}>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center space-x-2">
-                    <FileText className="w-5 h-5" />
-                    <span>{document.name}</span>
-                  </CardTitle>
+                  <CardTitle className="flex items-center space-x-2"><FileText className="w-5 h-5" /><span>{document.name}</span></CardTitle>
                   <div className="flex items-center space-x-2">
-                    <input
-                      type="file"
-                      accept=".pdf,.doc,.docx"
-                      onChange={(e) => handleFileUpload(document.id, e)}
-                      className="hidden"
-                      id={`file-upload-${document.id}`}
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => document.getElementById(`file-upload-${document.id}`).click()}
-                    >
+                    <input type="file" accept=".pdf,.doc,.docx" id={`file-upload-${document.id}`} className="hidden" onChange={(e) => handleFileUpload(document.id, e)} />
+                    <Button variant="outline" size="sm" onClick={() => triggerFileInput(document.id)}>
                       <Upload className="w-4 h-4 mr-2" />
                       Nova Versão
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => assignToLegal(document.id)}
-                    >
-                      <Send className="w-4 h-4 mr-2" />
-                      Atribuir ao Jurídico
-                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => assignToLegal(document.id)}><Send className="w-4 h-4 mr-2" />Atribuir ao Jurídico</Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="font-medium mb-2 flex items-center">
-                    <History className="w-4 h-4 mr-2" />
-                    Versões
-                  </h4>
+                  <h4 className="font-medium mb-2 flex items-center"><History className="w-4 h-4 mr-2" />Versões</h4>
                   <div className="space-y-2">
                     {document.versions.map(version => (
                       <div key={version.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="flex items-center space-x-3">
-                          <Badge variant={version.status === 'atual' ? 'default' : 'secondary'}>
-                            v{version.version}
-                          </Badge>
+                          <Badge variant={version.status === 'atual' ? 'default' : 'secondary'}>v{version.version}</Badge>
                           <span className="font-medium">{version.file}</span>
-                          <span className="text-sm text-gray-500">
-                            {version.uploadDate} por {version.uploadedBy}
-                          </span>
+                          <span className="text-sm text-gray-500">{version.uploadDate} por {version.uploadedBy}</span>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => handleDownload(version.file)}>
-                          <Download className="w-4 h-4" />
-                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDownload(version.file)}><Download className="w-4 h-4" /></Button>
                       </div>
                     ))}
+                     {document.versions.length === 0 && <p className="text-sm text-gray-500 text-center p-4">Nenhuma versão foi enviada para este documento.</p>}
                   </div>
                 </div>
-
                 <div>
-                  <h4 className="font-medium mb-2 flex items-center">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Minutos e Observações
-                  </h4>
+                  <h4 className="font-medium mb-2 flex items-center"><MessageSquare className="w-4 h-4 mr-2" />Minutos e Observações</h4>
                   <div className="space-y-3">
                     {document.minutes.map(minute => (
                       <div key={minute.id} className="p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-sm">{minute.author}</span>
-                          <span className="text-xs text-gray-500">{minute.date}</span>
-                        </div>
+                        <div className="flex items-center justify-between mb-2"><span className="font-medium text-sm">{minute.author}</span><span className="text-xs text-gray-500">{minute.date}</span></div>
                         <p className="text-sm text-gray-700">{minute.content}</p>
                       </div>
                     ))}
-                    
                     <div className="space-y-2">
-                      <Textarea
-                        placeholder="Adicionar nova observação..."
-                        value={newMinute.documentId === document.id ? newMinute.content : ''}
-                        onChange={(e) => setNewMinute({ documentId: document.id, content: e.target.value })}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => addMinute(document.id)}
-                        disabled={!newMinute.content.trim() || newMinute.documentId !== document.id}
-                        className="bg-[#D40404] hover:bg-[#B30303]"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Adicionar Observação
-                      </Button>
+                      <Textarea placeholder="Adicionar nova observação..." value={newMinute.documentId === document.id ? newMinute.content : ''} onChange={(e) => setNewMinute({ documentId: document.id, content: e.target.value })} />
+                      <Button size="sm" onClick={() => addMinute(document.id)} disabled={!newMinute.content.trim() || newMinute.documentId !== document.id} className="bg-[#D40404] hover:bg-[#B30303]"><Plus className="w-4 h-4 mr-2" />Adicionar Observação</Button>
                     </div>
                   </div>
                 </div>
@@ -419,42 +344,24 @@ export default function OperationDetails({ operations, documents, setDocuments, 
 
         <TabsContent value="followup" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Adicionar Follow-up</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Adicionar Follow-up</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="md:col-span-3">
-                  <Textarea
-                    placeholder="Descreva o follow-up..."
-                    value={newFollowUp.content}
-                    onChange={(e) => setNewFollowUp({ ...newFollowUp, content: e.target.value })}
-                  />
-                </div>
+                <div className="md:col-span-3"><Textarea placeholder="Descreva o follow-up..." value={newFollowUp.content} onChange={(e) => setNewFollowUp({ ...newFollowUp, content: e.target.value })} /></div>
                 <div className="space-y-2">
                   <Select value={newFollowUp.priority} onValueChange={(value) => setNewFollowUp({ ...newFollowUp, priority: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="baixa">Baixa</SelectItem>
                       <SelectItem value="media">Média</SelectItem>
                       <SelectItem value="alta">Alta</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button
-                    onClick={addFollowUp}
-                    disabled={!newFollowUp.content.trim()}
-                    className="w-full bg-[#D40404] hover:bg-[#B30303]"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Adicionar
-                  </Button>
+                  <Button onClick={addFollowUp} disabled={!newFollowUp.content.trim()} className="w-full bg-[#D40404] hover:bg-[#B30303]"><Plus className="w-4 h-4 mr-2" />Adicionar</Button>
                 </div>
               </div>
             </CardContent>
           </Card>
-
           <div className="space-y-3">
             {followUps.map(followUp => (
               <Card key={followUp.id}>
@@ -462,29 +369,14 @@ export default function OperationDetails({ operations, documents, setDocuments, 
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
-                        <Badge variant={
-                          followUp.priority === 'alta' ? 'destructive' :
-                          followUp.priority === 'media' ? 'default' : 'secondary'
-                        }>
-                          {followUp.priority}
-                        </Badge>
-                        <Badge variant={followUp.status === 'concluido' ? 'default' : 'outline'}>
-                          {followUp.status}
-                        </Badge>
+                        <Badge variant={followUp.priority === 'alta' ? 'destructive' : followUp.priority === 'media' ? 'default' : 'secondary'}>{followUp.priority}</Badge>
+                        <Badge variant={followUp.status === 'concluido' ? 'default' : 'outline'}>{followUp.status}</Badge>
                         <span className="text-sm text-gray-500">{followUp.date} - {followUp.author}</span>
                       </div>
                       <p className="text-gray-700">{followUp.content}</p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleFollowUpStatus(followUp.id)}
-                    >
-                      {followUp.status === 'pendente' ? (
-                        <CheckCircle className="w-4 h-4" />
-                      ) : (
-                        <Clock className="w-4 h-4" />
-                      )}
+                    <Button variant="ghost" size="sm" onClick={() => toggleFollowUpStatus(followUp.id)}>
+                      {followUp.status === 'pendente' ? (<CheckCircle className="w-4 h-4" />) : (<Clock className="w-4 h-4" />)}
                     </Button>
                   </div>
                 </CardContent>
@@ -496,58 +388,29 @@ export default function OperationDetails({ operations, documents, setDocuments, 
         <TabsContent value="checklist" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <CheckCircle className="w-5 h-5" />
-                <span>Checklist da Operação</span>
-              </CardTitle>
-              <CardDescription>
-                Itens obrigatórios para conclusão da operação
-              </CardDescription>
+              <CardTitle className="flex items-center space-x-2"><CheckCircle className="w-5 h-5" /><span>Checklist da Operação</span></CardTitle>
+              <CardDescription>Itens obrigatórios para conclusão da operação</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {checklist.map(item => (
                 <div key={item.id} className="flex items-start space-x-3 p-4 border rounded-lg">
-                  <input
-                    type="checkbox"
-                    checked={item.completed}
-                    onChange={() => toggleChecklistItem(item.id)}
-                    className="mt-1 h-4 w-4 text-[#D40404] focus:ring-[#D40404] border-gray-300 rounded"
-                  />
+                  <input type="checkbox" checked={item.completed} onChange={() => toggleChecklistItem(item.id)} className="mt-1 h-4 w-4 text-[#D40404] focus:ring-[#D40404] border-gray-300 rounded" />
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <h4 className={`font-medium ${item.completed ? 'text-green-700 line-through' : 'text-gray-900'}`}>
-                        {item.name}
-                      </h4>
-                      {item.completed && (
-                        <Badge className="bg-green-100 text-green-800">
-                          Concluído
-                        </Badge>
-                      )}
+                      <h4 className={`font-medium ${item.completed ? 'text-green-700 line-through' : 'text-gray-900'}`}>{item.name}</h4>
+                      {item.completed && (<Badge className="bg-green-100 text-green-800">Concluído</Badge>)}
                     </div>
                     <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                    {item.completed && (
-                      <p className="text-xs text-green-600 mt-2">
-                        Concluído por {item.completedBy} em {item.completedDate}
-                      </p>
-                    )}
+                    {item.completed && (<p className="text-xs text-green-600 mt-2">Concluído por {item.completedBy} em {item.completedDate}</p>)}
                   </div>
                 </div>
               ))}
-              
               <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                 <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-5 h-5 text-blue-600" />
-                  <span className="font-medium text-blue-900">
-                    Progresso: {checklist.filter(item => item.completed).length} de {checklist.length} itens concluídos
-                  </span>
+                  <CheckCircle className="w-5 h-5 text-blue-600" /><span className="font-medium text-blue-900">Progresso: {checklist.filter(item => item.completed).length} de {checklist.length} itens concluídos</span>
                 </div>
                 <div className="mt-2">
-                  <div className="w-full bg-blue-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${(checklist.filter(item => item.completed).length / checklist.length) * 100}%` }}
-                    ></div>
-                  </div>
+                  <div className="w-full bg-blue-200 rounded-full h-2"><div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{ width: `${(checklist.filter(item => item.completed).length / checklist.length) * 100}%` }}></div></div>
                 </div>
               </div>
             </CardContent>
@@ -557,30 +420,16 @@ export default function OperationDetails({ operations, documents, setDocuments, 
         <TabsContent value="log" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <History className="w-5 h-5" />
-                <span>Log da Operação</span>
-              </CardTitle>
-              <CardDescription>
-                Histórico completo de todas as ações realizadas na operação
-              </CardDescription>
+              <CardTitle className="flex items-center space-x-2"><History className="w-5 h-5" /><span>Log da Operação</span></CardTitle>
+              <CardDescription>Histórico completo de todas as ações realizadas na operação</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {operationLog.map(entry => (
                   <div key={entry.id} className="flex items-start space-x-4 p-4 border-l-4 border-[#D40404] bg-gray-50 rounded-r-lg">
-                    <div className="flex-shrink-0">
-                      <div className="w-10 h-10 bg-[#D40404] rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-white" />
-                      </div>
-                    </div>
+                    <div className="flex-shrink-0"><div className="w-10 h-10 bg-[#D40404] rounded-full flex items-center justify-center"><User className="w-5 h-5 text-white" /></div></div>
                     <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-gray-900">{entry.action}</h4>
-                        <div className="text-sm text-gray-500">
-                          {entry.date} às {entry.time}
-                        </div>
-                      </div>
+                      <div className="flex items-center justify-between"><h4 className="font-medium text-gray-900">{entry.action}</h4><div className="text-sm text-gray-500">{entry.date} às {entry.time}</div></div>
                       <p className="text-sm text-gray-600 mt-1">{entry.details}</p>
                       <p className="text-xs text-gray-500 mt-2">Por: {entry.user}</p>
                     </div>
@@ -593,46 +442,55 @@ export default function OperationDetails({ operations, documents, setDocuments, 
 
         <TabsContent value="details">
           <Card>
-            <CardHeader>
-              <CardTitle>Detalhes da Operação</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Detalhes da Operação</CardTitle>
+                <CardDescription>Visualize e edite as informações da operação.</CardDescription>
+              </div>
+              {isEditing ? (
+                <Button onClick={handleSaveChanges}><Save className="w-4 h-4 mr-2" />Salvar Alterações</Button>
+              ) : (
+                <Button variant="outline" onClick={() => setIsEditing(true)}><Edit className="w-4 h-4 mr-2" />Editar</Button>
+              )}
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Nome da Operação</Label>
-                    <p className="text-lg font-semibold">{operation.name}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Tipo</Label>
-                    <p className="text-lg">{operation.type}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Emissora</Label>
-                    <p className="text-lg">{operation.issuer}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">CNPJ</Label>
-                    <p className="text-lg">{operation.cnpj}</p>
-                  </div>
+            <CardContent className="space-y-6 pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <div className="space-y-1">
+                  <Label className="text-gray-600">Nome da Operação</Label>
+                  {isEditing ? (<Input value={editableData.name} onChange={(e) => handleInputChange('name', e.target.value)} />) : (<p className="font-semibold">{operation.name}</p>)}
                 </div>
-                <div className="space-y-4">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Valor</Label>
-                    <p className="text-lg font-semibold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(operation.value)}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Data de Emissão</Label>
-                    <p className="text-lg">{operation.issueDate || 'Não definida'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Data de Vencimento</Label>
-                    <p className="text-lg">{operation.maturity}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">Analista Responsável</Label>
-                    <p className="text-lg">{operation.analyst}</p>
-                  </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-600">Analista Responsável</Label>
+                  {isEditing ? (
+                    <Select value={editableData.analyst} onValueChange={(value) => handleInputChange('analyst', value)}>
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>{ANALYSTS_LIST.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  ) : (<p className="font-semibold">{operation.analyst || 'A definir'}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-600">Tipo</Label>
+                  <p className="font-semibold">{operation.type}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-600">Data de Vencimento</Label>
+                  {isEditing ? (<Input type="date" value={editableData.maturity || ''} onChange={(e) => handleInputChange('maturity', e.target.value)} />) : (<p className="font-semibold">{operation.maturity || 'A definir'}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-600">Emissora</Label>
+                  <p className="font-semibold">{operation.issuer}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-600">Data de Emissão</Label>
+                   {isEditing ? (<Input type="date" value={editableData.issueDate || ''} onChange={(e) => handleInputChange('issueDate', e.target.value)} />) : (<p className="font-semibold">{operation.issueDate || 'Não definida'}</p>)}
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-600">CNPJ</Label>
+                  <p className="font-semibold">{operation.cnpj || 'Não informado'}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-600">Valor</Label>
+                  <p className="font-semibold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(operation.value)}</p>
                 </div>
               </div>
             </CardContent>
@@ -645,27 +503,17 @@ export default function OperationDetails({ operations, documents, setDocuments, 
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Atribuir ao Jurídico</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setAssignModal({ open: false, documentId: null, documentName: '' })}
-              >
-                ×
-              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setAssignModal({ open: false, documentId: null, documentName: '' })}>×</Button>
             </div>
-            
             <div className="space-y-4">
               <div>
                 <Label className="text-sm font-medium text-gray-600">Documento</Label>
                 <p className="text-lg font-semibold">{assignModal.documentName}</p>
               </div>
-              
               <div className="space-y-2">
                 <Label>Atribuir para *</Label>
                 <Select value={selectedLegalUser} onValueChange={setSelectedLegalUser}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um usuário do jurídico" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Selecione um usuário do jurídico" /></SelectTrigger>
                   <SelectContent>
                     {legalUsers.map(user => (
                       <SelectItem key={user.id} value={user.id}>
@@ -678,23 +526,13 @@ export default function OperationDetails({ operations, documents, setDocuments, 
                   </SelectContent>
                 </Select>
               </div>
-              
               <div className="space-y-2">
                 <Label>Observação (opcional)</Label>
-                <Textarea
-                  placeholder="Adicione uma observação sobre a atribuição..."
-                  value={assignmentNote}
-                  onChange={(e) => setAssignmentNote(e.target.value)}
-                  rows={3}
-                />
+                <Textarea placeholder="Adicione uma observação sobre a atribuição..." value={assignmentNote} onChange={(e) => setAssignmentNote(e.target.value)} rows={3} />
               </div>
             </div>
-            
             <div className="flex items-center justify-end space-x-2 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => setAssignModal({ open: false, documentId: null, documentName: '' })}
-              >
+              <Button variant="outline" onClick={() => setAssignModal({ open: false, documentId: null, documentName: '' })}>
                 Cancelar
               </Button>
               <Button
@@ -712,4 +550,3 @@ export default function OperationDetails({ operations, documents, setDocuments, 
     </div>
   );
 }
-

@@ -16,11 +16,14 @@ import NcPipeline from "./components/NcPipeline.jsx";
 import BankDetails from "./components/BankDetails.jsx";
 import NewNcOperation from "./components/NewNcOperation.jsx";
 import PdfReader from "./components/PdfReader.jsx";
+import Ferramentas from './components/Ferramentas.jsx';
+import Templates from './components/Templates.jsx';
 
 import {
   FileText, Plus, Search, Filter, BarChart3, Settings as SettingsIcon, Users, Building2,
-  Calendar, DollarSign, CheckCircle, Clock, AlertCircle, Scale, Wifi
+  Calendar, DollarSign, CheckCircle, Clock, AlertCircle, Scale, Wifi, Cog, Mail
 } from 'lucide-react';
+
 import './App.css';
 
 // --- DADOS MOCKADOS GLOBAIS ATUALIZADOS ---
@@ -90,6 +93,8 @@ function Layout({ children }) {
             <Button variant="ghost" className={isActive('/legal') ? "text-[#D40404] border-b-2 border-[#D40404]" : "text-gray-600 hover:text-[#D40404]"} onClick={() => navigate('/legal')}><Scale className="w-4 h-4 mr-2" />Jurídico</Button>
             <Button variant="ghost" className={isActive('/nc-pipeline') ? "text-[#D40404] border-b-2 border-[#D40404]" : "text-gray-600 hover:text-[#D40404]"} onClick={() => navigate('/nc-pipeline')}><Building2 className="w-4 h-4 mr-2" />Esteira de NC</Button>
             <Button variant="ghost" className={isActive('/settings') ? "text-[#D40404] border-b-2 border-[#D40404]" : "text-gray-600 hover:text-[#D40404]"} onClick={() => navigate('/settings')}><SettingsIcon className="w-4 h-4 mr-2" />Configurações</Button>
+            <Button variant="ghost" className={isActive('/ferramentas') ? "text-[#D40404] border-b-2 border-[#D40404]" : "text-gray-600 hover:text-[#D40404]"} onClick={() => navigate('/ferramentas')}><Cog className="w-4 h-4 mr-2" />Ferramentas</Button>
+            <Button variant="ghost" className={isActive('/templates') ? "text-[#D40404] border-b-2 border-[#D40404]" : "text-gray-600 hover:text-[#D40404]"} onClick={() => navigate('/templates')}><Mail className="w-4 h-4 mr-2" />Templates</Button>
           </div>
         </div>
       </nav>
@@ -398,9 +403,11 @@ function App() {
           path="/operations/:id" 
           element={<OperationDetails 
             operations={operations} 
+            setOperations={setOperations} // Adicionado para a edição funcionar
             documents={documents} 
             setDocuments={setDocuments} 
-            setLegalTasks={setLegalTasks} 
+            legalTasks={legalTasks}       // Adicionado para ler as tarefas
+            setLegalTasks={setLegalTasks} // Adicionado para criar novas tarefas
           />} 
         />
         <Route path="/analysts" element={<Analysts />} />
@@ -408,10 +415,9 @@ function App() {
         <Route path="/nc-pipeline" element={<NcPipeline banks={banks} addBank={addBank} />} />
         <Route path="/nc-pipeline/:bankId" element={<BankDetails banks={banks} />} />
         <Route path="/nc-pipeline/:bankId/new-operation" element={<NewNcOperation />} />
-        <Route 
-          path="/settings" 
-          element={<Settings logs={apiLogs} onTestWebhook={handleTestWebhook} />} 
-        />
+        <Route path="/settings" element={<Settings logs={apiLogs} onTestWebhook={handleTestWebhook} />}/>
+        <Route path="/ferramentas" element={<Ferramentas />} />
+        <Route path="/templates" element={<Templates />} />
       </Routes>
     </Layout>
   );
