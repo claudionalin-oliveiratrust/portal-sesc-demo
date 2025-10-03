@@ -1,0 +1,715 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button.jsx';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card.jsx';
+import { Badge } from '@/components/ui/badge.jsx';
+import { Progress } from '@/components/ui/progress.jsx';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs.jsx';
+import { Input } from '@/components/ui/input.jsx';
+import { Label } from '@/components/ui/label.jsx';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
+import { Textarea } from '@/components/ui/textarea.jsx';
+import { 
+  ArrowLeft, 
+  FileText, 
+  User, 
+  Building2, 
+  Calendar, 
+  DollarSign,
+  Download,
+  Upload,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Plus,
+  Edit,
+  MessageSquare,
+  History,
+  Send
+} from 'lucide-react';
+import PendingTasks from './PendingTasks.jsx'; // IMPORTAÇÃO DO NOVO COMPONENTE
+
+const ANALYSTS = [
+  { id: 1, name: 'Ana Silva', email: 'ana.silva@sesc.com.br', department: 'Renda Fixa' },
+  { id: 2, name: 'Carlos Santos', email: 'carlos.santos@sesc.com.br', department: 'Securitização' },
+  { id: 3, name: 'Maria Oliveira', email: 'maria.oliveira@sesc.com.br', department: 'Estruturação' },
+  { id: 4, name: 'João Pereira', email: 'joao.pereira@sesc.com.br', department: 'Compliance' },
+  { id: 5, name: 'Fernanda Costa', email: 'fernanda.costa@sesc.com.br', department: 'Jurídico' }
+];
+
+// Componente de Badge de Status com cores dinâmicas (local para não depender do App.jsx)
+function StatusBadge({ status }) {
+  const baseClasses = "px-2.5 py-0.5 text-xs font-semibold rounded-full";
+  const statusClasses = {
+    ativa: "bg-green-100 text-green-800",
+    concluida: "bg-blue-100 text-blue-800",
+    pendente: "bg-yellow-100 text-yellow-800 border border-yellow-300",
+  };
+  return <span className={`${baseClasses} ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`}>{status}</span>;
+}
+
+export default function OperationDetails({ operations, documents, setDocuments, setLegalTasks }) {
+  const { id } = useParams();
+  const navigate = useNavigate();
+
+  const operation = operations.find(op => op.id.toString() === id);
+
+  const [newMinute, setNewMinute] = useState({ documentId: null, content: '' });
+  const [followUps, setFollowUps] = useState([
+    { id: 1, date: '2024-01-25', author: 'Ana Silva', priority: 'alta', content: 'Aguardando assinatura do contrato pela emissora', status: 'pendente' },
+    { id: 2, date: '2024-01-20', author: 'João Pereira', priority: 'media', content: 'Documentação compliance aprovada', status: 'concluido' }
+  ]);
+  const [newFollowUp, setNewFollowUp] = useState({ content: '', priority: 'media' });
+  
+  const [checklist, setChecklist] = useState([
+    { id: 'cadastro_emissor', name: 'Cadastro do Emissor', description: 'Verificar se o cadastro do emissor está completo e atualizado', completed: true, completedBy: 'Ana Silva', completedDate: '2024-01-15' },
+    { id: 'contrato_prestacao', name: 'Contrato de Prestação de Serviço', description: 'Confirmar assinatura e vigência do contrato', completed: false, completedBy: null, completedDate: null },
+    { id: 'termo_emissao', name: 'Termo de Emissão', description: 'Validar todas as informações do termo de emissão', completed: true, completedBy: 'João Pereira', completedDate: '2024-01-18' },
+    { id: 'boletim_subscricao', name: 'Boletim de Subscrição (Facultativo)', description: 'Se aplicável, verificar boletim de subscrição', completed: false, completedBy: null, completedDate: null },
+    { id: 'comprovante_integralizacao', name: 'Comprovante de Integralização', description: 'Confirmar integralização dos recursos', completed: false, completedBy: null, completedDate: null }
+  ]);
+  
+  const [operationLog, setOperationLog] = useState([
+    { id: 1, date: '2024-01-10', time: '09:30', user: 'Ana Silva', action: 'Operação criada', details: 'Nova operação CDB Banco XYZ 2024 criada no sistema' },
+    { id: 2, date: '2024-01-12', time: '14:15', user: 'Fernanda Costa', action: 'Documento adicionado', details: 'Contrato de Prestação de Serviços v1.0 adicionado' },
+    { id: 3, date: '2024-01-15', time: '10:45', user: 'Ana Silva', action: 'Checklist atualizado', details: 'Item "Cadastro do Emissor" marcado como concluído' },
+  ]);
+
+  const [assignModal, setAssignModal] = useState({ open: false, documentId: null, documentName: '' });
+  const [selectedLegalUser, setSelectedLegalUser] = useState('');
+  const [assignmentNote, setAssignmentNote] = useState('');
+
+  const legalUsers = [
+    { id: 'fernanda.costa', name: 'Fernanda Costa', email: 'fernanda.costa@sesc.com.br' },
+    { id: 'ricardo.silva', name: 'Ricardo Silva', email: 'ricardo.silva@sesc.com.br' },
+    { id: 'patricia.santos', name: 'Patrícia Santos', email: 'patricia.santos@sesc.com.br' }
+  ];
+
+  const handleDownload = (fileName) => {
+    const element = document.createElement("a");
+    const file = new Blob([`Conteúdo de simulação para o arquivo: ${fileName}`], {type: 'text/plain'});
+    element.href = URL.createObjectURL(file);
+    element.download = fileName;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+  };
+
+  const handleFileUpload = (documentId, event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setDocuments(prevDocuments => {
+      return prevDocuments.map(doc => {
+        if (doc.id === documentId) {
+          const lastVersion = doc.versions.length > 0 ? doc.versions[doc.versions.length - 1] : { version: '0.9' };
+          const newVersionNumber = (parseFloat(lastVersion.version) + 0.1).toFixed(1);
+
+          const newVersion = {
+            id: Date.now(),
+            version: newVersionNumber,
+            file: file.name,
+            uploadDate: new Date().toISOString().split('T')[0],
+            uploadedBy: 'Ana Silva',
+            status: 'atual'
+          };
+
+          const updatedVersions = doc.versions.map(v => ({ ...v, status: 'obsoleto' }));
+
+          return {
+            ...doc,
+            versions: [...updatedVersions, newVersion]
+          };
+        }
+        return doc;
+      });
+    });
+
+    alert(`Nova versão do documento "${documents.find(d => d.id === documentId).name}" foi adicionada com sucesso!`);
+  };
+
+  const addMinute = (documentId) => {
+    if (newMinute.content.trim()) {
+      const updatedDocuments = documents.map(doc => {
+        if (doc.id === documentId) {
+          return {
+            ...doc,
+            minutes: [
+              ...doc.minutes,
+              {
+                id: Date.now(),
+                date: new Date().toISOString().split('T')[0],
+                author: 'Ana Silva',
+                content: newMinute.content
+              }
+            ]
+          }
+        }
+        return doc
+      })
+      setDocuments(updatedDocuments)
+      setNewMinute({ documentId: null, content: '' })
+    }
+  }
+
+  const addFollowUp = () => {
+    if (newFollowUp.content.trim()) {
+      const followUp = {
+        id: Date.now(),
+        date: new Date().toISOString().split('T')[0],
+        author: 'Ana Silva',
+        priority: newFollowUp.priority,
+        content: newFollowUp.content,
+        status: 'pendente'
+      }
+      setFollowUps([followUp, ...followUps])
+      setNewFollowUp({ content: '', priority: 'media' })
+    }
+  }
+
+  const toggleFollowUpStatus = (followUpId) => {
+    setFollowUps(followUps.map(fu => 
+      fu.id === followUpId 
+        ? { ...fu, status: fu.status === 'pendente' ? 'concluido' : 'pendente' }
+        : fu
+    ))
+  }
+
+  const assignToLegal = (documentId) => {
+    const document = documents.find(doc => doc.id === documentId)
+    setAssignModal({ 
+      open: true, 
+      documentId: documentId, 
+      documentName: document?.name || 'Documento' 
+    })
+    setSelectedLegalUser('')
+    setAssignmentNote('')
+  }
+
+  const toggleChecklistItem = (itemId) => {
+    const updatedChecklist = checklist.map(item => {
+      if (item.id === itemId) {
+        const isCompleting = !item.completed
+        const updatedItem = {
+          ...item,
+          completed: isCompleting,
+          completedBy: isCompleting ? 'Ana Silva' : null,
+          completedDate: isCompleting ? new Date().toISOString().split('T')[0] : null
+        }
+        
+        const logEntry = {
+          id: Date.now(),
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          user: 'Ana Silva',
+          action: 'Checklist atualizado',
+          details: `Item "${item.name}" ${isCompleting ? 'marcado como concluído' : 'desmarcado'}`
+        }
+        setOperationLog([logEntry, ...operationLog])
+        
+        return updatedItem
+      }
+      return item
+    })
+    setChecklist(updatedChecklist)
+  }
+
+  const confirmAssignment = () => {
+    if (selectedLegalUser && assignModal.documentId) {
+      const selectedUser = legalUsers.find(user => user.id === selectedLegalUser);
+      const document = documents.find(doc => doc.id === assignModal.documentId);
+      const latestVersion = document.versions[document.versions.length - 1];
+
+      const newTask = {
+        id: Date.now(),
+        operationId: parseInt(id),
+        documentId: assignModal.documentId,
+        operationName: operation.name,
+        documentName: `${document.name} v${latestVersion.version}`,
+        assignedBy: 'Ana Silva',
+        assignedDate: new Date().toISOString().split('T')[0],
+        status: 'Pendente',
+        deadline: null,
+      };
+
+      setLegalTasks(prevTasks => [newTask, ...prevTasks]);
+      
+      setAssignModal({ open: false, documentId: null, documentName: '' });
+      alert(`Documento "${assignModal.documentName}" atribuído com sucesso para ${selectedUser.name}!`);
+    }
+  }
+
+  if (!operation) {
+    return (
+      <div className="text-center p-12">
+        <h1 className="text-2xl font-bold">Operação não encontrada</h1>
+        <p className="text-gray-600 mt-2">A operação com o ID "{id}" não existe ou não foi carregada.</p>
+        <Button onClick={() => navigate('/operations')} className="mt-4">Voltar para Operações</Button>
+      </div>
+    );
+  }
+
+  const operationDocuments = documents.filter(doc => doc.operationId === parseInt(id));
+
+  return (
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Button variant="outline" onClick={() => navigate('/operations')}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Voltar
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{operation.name}</h1>
+            <p className="text-gray-600">{operation.type} - {operation.issuer}</p>
+          </div>
+        </div>
+        <StatusBadge status={operation.status} />
+      </div>
+
+      <PendingTasks operation={operation} />
+
+      <Card>
+        <CardContent className="p-6">
+          <div className="summary-grid">
+            <div className="flex items-center space-x-3">
+              <DollarSign className="w-8 h-8 text-green-600" />
+              <div>
+                <p className="text-sm text-gray-600">Valor</p>
+                <p className="text-lg font-semibold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(operation.value)}</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <User className="w-8 h-8 text-blue-600" />
+              <div>
+                <p className="text-sm text-gray-600">Analista</p>
+                <p className="text-lg font-semibold">{operation.analyst}</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Calendar className="w-8 h-8 text-purple-600" />
+              <div>
+                <p className="text-sm text-gray-600">Vencimento</p>
+                <p className="text-lg font-semibold">{operation.maturity}</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <CheckCircle className="w-8 h-8 text-orange-600" />
+              <div>
+                <p className="text-sm text-gray-600">Progresso</p>
+                <div className="flex items-center space-x-2">
+                  <Progress value={operation.progress} className="w-20 h-2" />
+                  <span className="text-lg font-semibold">{operation.progress}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="documents" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="documents">Documentos</TabsTrigger>
+          <TabsTrigger value="followup">Follow-up</TabsTrigger>
+          <TabsTrigger value="checklist">Checklist</TabsTrigger>
+          <TabsTrigger value="log">Log</TabsTrigger>
+          <TabsTrigger value="details">Detalhes</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="documents" className="space-y-4">
+          {operationDocuments.map(document => (
+            <Card key={document.id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center space-x-2">
+                    <FileText className="w-5 h-5" />
+                    <span>{document.name}</span>
+                  </CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={(e) => handleFileUpload(document.id, e)}
+                      className="hidden"
+                      id={`file-upload-${document.id}`}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById(`file-upload-${document.id}`).click()}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      Nova Versão
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => assignToLegal(document.id)}
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Atribuir ao Jurídico
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-2 flex items-center">
+                    <History className="w-4 h-4 mr-2" />
+                    Versões
+                  </h4>
+                  <div className="space-y-2">
+                    {document.versions.map(version => (
+                      <div key={version.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <Badge variant={version.status === 'atual' ? 'default' : 'secondary'}>
+                            v{version.version}
+                          </Badge>
+                          <span className="font-medium">{version.file}</span>
+                          <span className="text-sm text-gray-500">
+                            {version.uploadDate} por {version.uploadedBy}
+                          </span>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => handleDownload(version.file)}>
+                          <Download className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-medium mb-2 flex items-center">
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Minutos e Observações
+                  </h4>
+                  <div className="space-y-3">
+                    {document.minutes.map(minute => (
+                      <div key={minute.id} className="p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-sm">{minute.author}</span>
+                          <span className="text-xs text-gray-500">{minute.date}</span>
+                        </div>
+                        <p className="text-sm text-gray-700">{minute.content}</p>
+                      </div>
+                    ))}
+                    
+                    <div className="space-y-2">
+                      <Textarea
+                        placeholder="Adicionar nova observação..."
+                        value={newMinute.documentId === document.id ? newMinute.content : ''}
+                        onChange={(e) => setNewMinute({ documentId: document.id, content: e.target.value })}
+                      />
+                      <Button
+                        size="sm"
+                        onClick={() => addMinute(document.id)}
+                        disabled={!newMinute.content.trim() || newMinute.documentId !== document.id}
+                        className="bg-[#D40404] hover:bg-[#B30303]"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Adicionar Observação
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+
+        <TabsContent value="followup" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Adicionar Follow-up</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-3">
+                  <Textarea
+                    placeholder="Descreva o follow-up..."
+                    value={newFollowUp.content}
+                    onChange={(e) => setNewFollowUp({ ...newFollowUp, content: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Select value={newFollowUp.priority} onValueChange={(value) => setNewFollowUp({ ...newFollowUp, priority: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="baixa">Baixa</SelectItem>
+                      <SelectItem value="media">Média</SelectItem>
+                      <SelectItem value="alta">Alta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={addFollowUp}
+                    disabled={!newFollowUp.content.trim()}
+                    className="w-full bg-[#D40404] hover:bg-[#B30303]"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-3">
+            {followUps.map(followUp => (
+              <Card key={followUp.id}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Badge variant={
+                          followUp.priority === 'alta' ? 'destructive' :
+                          followUp.priority === 'media' ? 'default' : 'secondary'
+                        }>
+                          {followUp.priority}
+                        </Badge>
+                        <Badge variant={followUp.status === 'concluido' ? 'default' : 'outline'}>
+                          {followUp.status}
+                        </Badge>
+                        <span className="text-sm text-gray-500">{followUp.date} - {followUp.author}</span>
+                      </div>
+                      <p className="text-gray-700">{followUp.content}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleFollowUpStatus(followUp.id)}
+                    >
+                      {followUp.status === 'pendente' ? (
+                        <CheckCircle className="w-4 h-4" />
+                      ) : (
+                        <Clock className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="checklist" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <CheckCircle className="w-5 h-5" />
+                <span>Checklist da Operação</span>
+              </CardTitle>
+              <CardDescription>
+                Itens obrigatórios para conclusão da operação
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {checklist.map(item => (
+                <div key={item.id} className="flex items-start space-x-3 p-4 border rounded-lg">
+                  <input
+                    type="checkbox"
+                    checked={item.completed}
+                    onChange={() => toggleChecklistItem(item.id)}
+                    className="mt-1 h-4 w-4 text-[#D40404] focus:ring-[#D40404] border-gray-300 rounded"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className={`font-medium ${item.completed ? 'text-green-700 line-through' : 'text-gray-900'}`}>
+                        {item.name}
+                      </h4>
+                      {item.completed && (
+                        <Badge className="bg-green-100 text-green-800">
+                          Concluído
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                    {item.completed && (
+                      <p className="text-xs text-green-600 mt-2">
+                        Concluído por {item.completedBy} em {item.completedDate}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+              
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-5 h-5 text-blue-600" />
+                  <span className="font-medium text-blue-900">
+                    Progresso: {checklist.filter(item => item.completed).length} de {checklist.length} itens concluídos
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(checklist.filter(item => item.completed).length / checklist.length) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="log" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <History className="w-5 h-5" />
+                <span>Log da Operação</span>
+              </CardTitle>
+              <CardDescription>
+                Histórico completo de todas as ações realizadas na operação
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {operationLog.map(entry => (
+                  <div key={entry.id} className="flex items-start space-x-4 p-4 border-l-4 border-[#D40404] bg-gray-50 rounded-r-lg">
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 bg-[#D40404] rounded-full flex items-center justify-center">
+                        <User className="w-5 h-5 text-white" />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-gray-900">{entry.action}</h4>
+                        <div className="text-sm text-gray-500">
+                          {entry.date} às {entry.time}
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">{entry.details}</p>
+                      <p className="text-xs text-gray-500 mt-2">Por: {entry.user}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="details">
+          <Card>
+            <CardHeader>
+              <CardTitle>Detalhes da Operação</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Nome da Operação</Label>
+                    <p className="text-lg font-semibold">{operation.name}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Tipo</Label>
+                    <p className="text-lg">{operation.type}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Emissora</Label>
+                    <p className="text-lg">{operation.issuer}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">CNPJ</Label>
+                    <p className="text-lg">{operation.cnpj}</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Valor</Label>
+                    <p className="text-lg font-semibold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(operation.value)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Data de Emissão</Label>
+                    <p className="text-lg">{operation.issueDate || 'Não definida'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Data de Vencimento</Label>
+                    <p className="text-lg">{operation.maturity}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Analista Responsável</Label>
+                    <p className="text-lg">{operation.analyst}</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {assignModal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Atribuir ao Jurídico</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAssignModal({ open: false, documentId: null, documentName: '' })}
+              >
+                ×
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Documento</Label>
+                <p className="text-lg font-semibold">{assignModal.documentName}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Atribuir para *</Label>
+                <Select value={selectedLegalUser} onValueChange={setSelectedLegalUser}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um usuário do jurídico" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {legalUsers.map(user => (
+                      <SelectItem key={user.id} value={user.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{user.name}</span>
+                          <span className="text-sm text-gray-500">{user.email}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Observação (opcional)</Label>
+                <Textarea
+                  placeholder="Adicione uma observação sobre a atribuição..."
+                  value={assignmentNote}
+                  onChange={(e) => setAssignmentNote(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-end space-x-2 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setAssignModal({ open: false, documentId: null, documentName: '' })}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={confirmAssignment}
+                disabled={!selectedLegalUser}
+                className="bg-[#D40404] hover:bg-[#B30303]"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Atribuir
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
