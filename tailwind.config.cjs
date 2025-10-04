@@ -75,3 +75,28 @@ module.exports = {
   },
   plugins: [require("tailwindcss-animate")],
 }
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  // ... (outras configurações como darkMode, content, etc.)
+  theme: {
+    container: {
+      // ...
+    },
+    extend: {
+      // ... (outras extensões como colors, borderRadius, etc.)
+
+      // --- ADICIONE ESTA SEÇÃO ---
+      keyframes: {
+        "fade-in": {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+      },
+      animation: {
+        "fade-in": 'fade-in 0.5s ease-in-out',
+      },
+      // --- FIM DA SEÇÃO ADICIONADA ---
+    },
+  },
+  plugins: [require("tailwindcss-animate")],
+}

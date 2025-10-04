@@ -56,6 +56,7 @@ import BankDetails from "./components/BankDetails.jsx";
 import NewNcOperation from "./components/NewNcOperation.jsx";
 import Ferramentas from "./components/Ferramentas.jsx";
 import Templates from "./components/Templates.jsx";
+import Conciliacao from "./components/Conciliacao.jsx"; 
 
 import {
   FileText,
@@ -82,6 +83,7 @@ import {
   XCircle,
   CheckCircle2,
   Bell,
+  Calculator
 } from "lucide-react";
 
 import "./App.css";
@@ -200,8 +202,12 @@ function Layout({ children, notificationAlerts, removeNotificationAlert, notific
               <DropdownMenuContent>
                 <DropdownMenuLabel>Itens Disponíveis</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/ferramentas")}> <Cog className="w-4 h-4 mr-2" /> <span>Conversor</span> </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/templates")}> <FileSignature className="w-4 h-4 mr-2" /> <span>Templates</span> </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/ferramentas")}> <Cog className="w-4 h-4 mr-2" /> <span>Conversor B3</span> </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/templates")}> <FileSignature className="w-4 h-4 mr-2" /> <span>Template de Emails</span> </DropdownMenuItem>
+                 <DropdownMenuItem onClick={() => navigate("/conciliacao")}>
+    <Calculator className="w-4 h-4 mr-2" />
+    <span>Conciliação de Recursos</span>
+  </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -496,6 +502,7 @@ function App() {
         <Route path="/settings" element={ <Settings logs={apiLogs} onTestWebhook={handleTestWebhook} /> } />
         <Route path="/ferramentas" element={<Ferramentas />} />
         <Route path="/templates" element={<Templates />} />
+        <Route path="/conciliacao" element={<Conciliacao />} />
       </Routes>
     </Layout>
   );
