@@ -521,10 +521,10 @@ export default function NewOperationSimple({ addOperation, setDocuments }) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="wdl">WDL (Work, Demand and Legal) *</Label>
+                <Label htmlFor="wdl">WGL (Work Group List) *</Label>
                 <Textarea
                   id="wdl"
-                  placeholder="Descreva o escopo do trabalho, demandas e aspectos legais da operação."
+                  placeholder="Informe os email de comunicação da operação, separados por vírgula"
                   value={formData.wdl}
                   onChange={(e) => handleInputChange('wdl', e.target.value)}
                   rows={5}
